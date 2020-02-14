@@ -1,0 +1,26 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  namespace: kube-webhook
+  name: cronjob-test
+  annotations:
+    io.kubernetes-network.region-id: "region-id-test"
+    io.kubernetes-network.subnet-id: "subnet-id-test"
+    io.kubernetes-network.subnetgatewayaddr: "subnetgatewayaddr-test"
+    io.kubernetes-webhook-server.cluster-id: "cluster-id-test"
+    io.kubernetes-network.subnetcidr: "subnetcidr"
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cronjob-test
+              image: busybox
+              imagePullPolicy: IfNotPresent
+              args:
+                - "bin/sh"
+                - "-c"
+                - "for i in 9 8 7 6 5 4 3 2 1; do echo $i; done"

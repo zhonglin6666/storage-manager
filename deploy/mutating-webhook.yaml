@@ -1,0 +1,32 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: kube-webhook-mutating
+  namespace: kube-webhook
+  labels:
+    app: kube-webhook
+webhooks:
+  - name: kube-webhook.mutating.me
+    clientConfig:
+      service:
+        name: kube-webhook-svc
+        namespace: kube-webhook
+        path: "/webhook"
+      caBundle: ${CA_BUNDLE}
+    rules:
+      - operations: [ "CREATE", "DELETE", "UPDATE" ]
+        apiGroups: [ "apps" ]
+        apiVersions: [ "v1", "v1beta1", "v1beta2" ]
+        resources: [ "deployments", "statefulsets" ]
+      - operations: [ "CREATE", "DELETE", "UPDATE" ]
+        apiGroups: [ "extensions" ]
+        apiVersions: [ "v1", "v1beta1", "v1beta2" ]
+        resources: [ "deployments", "statefulsets" ]
+      - operations: [ "CREATE", "DELETE", "UPDATE" ]
+        apiGroups: [ "batch" ]
+        apiVersions: [ "v1", "v1beta1", "v1beta2" ]
+        resources: [ "jobs" ]
+      - operations: [ "CREATE", "DELETE", "UPDATE" ]
+        apiGroups: [ "batch" ]
+        apiVersions: [ "v1beta1" ]
+        resources: [ "cronjobs" ]
