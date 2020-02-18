@@ -9,6 +9,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"storage-manager/cmd/app"
 )
 
 var (
@@ -42,9 +44,9 @@ func main() {
 				Usage: "enable debug log level",
 			},
 		},
-		//Commands: []cli.Command{
-		//
-		//},
+		Commands: []*cli.Command{
+			app.DaemonCmd(),
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -70,5 +72,5 @@ func main() {
 }
 
 func cmdNotFound(ctx *cli.Context, cmd string) {
-	panic(fmt.Errorf("Invalid command: %s", cmd))
+	panic(fmt.Errorf("invalid command: %s", cmd))
 }
