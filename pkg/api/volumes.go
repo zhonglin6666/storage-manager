@@ -8,8 +8,9 @@ import (
 )
 
 type Volume struct {
-	Replicas int
-	Size     int
+	Replicas   int
+	Size       int
+	TargetPath string
 }
 
 func getVolume(request *restful.Request, response *restful.Response) {
@@ -30,5 +31,18 @@ func createVolume(request *restful.Request, response *restful.Response) {
 	logrus.Infof("Get volumes %#v", volume)
 
 	mem := fs.NewMemoryFileSystem("/tmp/aa", true)
+	go mem.Create()
+}
+
+func mountVolume(request *restful.Request, response *restful.Response) {
+	volume := new(Volume)
+	if err := request.ReadEntity(&volume); err != nil {
+		response.WriteErrorString(http.StatusInternalServerError, err.Error())
+	}
+
+	volumeID := request.PathParameter("user-id")
+	logrus.Infof("Get volumes user-id: %v, %#v", volumeID, volume)
+
+	mem := fs.NewMemoryFileSystem(volume.TargetPath, true)
 	go mem.Create()
 }

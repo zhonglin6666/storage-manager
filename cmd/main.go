@@ -53,22 +53,12 @@ func main() {
 		logrus.Fatalf("Run error: %v", err)
 	}
 
-	// start http server in new rountine
-	logrus.Infof("Webhook start to listen on ...")
-	//go func() {
-	//	if err := ws.Server.ListenAndServeTLS("", ""); err != nil {
-	//		logrus.Fatalf("Filed to listen and serve webhook server: %v", err)
-	//	}
-	//}()
-
 	// listening OS shutdown singal
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 
-	logrus.Infof("Shutdown signal, shutting down webhook service ...")
-
-	//ws.Server.Shutdown(context.Background())
+	logrus.Infof("Shutdown signal, shutting down http service ...")
 }
 
 func cmdNotFound(ctx *cli.Context, cmd string) {

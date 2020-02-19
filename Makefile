@@ -4,9 +4,9 @@
 
 REV=v1.0.0
 
-NAME=xxxxx
+NAME=storage-manager
 
-all: fmt build image
+all: fmt build image kd
 
 fmt:
 	gofmt -s -l -w ./cmd/
@@ -14,6 +14,12 @@ fmt:
 
 image:
 	docker build -t ${NAME}:latest .
+
+kd:
+	kubectl apply -f deploy/
+
+ukd:
+	kubectl delete -f deploy/
 
 build:
 	mkdir -p bin

@@ -2,14 +2,14 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: webhook-server-sa
-  namespace: kube-webhook
+  name: storage-manager-sa
+  namespace: kube-csi
 
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: webhook-server
+  name: storage-manager
 rules:
   - apiGroups: ["apps/v1", "apps/v1beta1", "apps/v1beta2", "extensions/v1beta1"]
     resources: ["deployments"]
@@ -22,11 +22,11 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: webhook-server-role
+  name: storage-manager-role
 subjects:
   - kind: ServiceAccount
-    name: webhook-server-sa
-    namespace: kube-webhook
+    name: storage-manager-sa
+    namespace: kube-csi
 roleRef:
   kind: ClusterRole
   name: cluster-admin

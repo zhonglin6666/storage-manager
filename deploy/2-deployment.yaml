@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storage-manager
+  namespace: kube-csi
+  labels:
+    app: storage-manager
+spec:
+  selector:
+    matchLabels:
+      app: storage-manager
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: storage-manager
+    spec:
+      serviceAccount: storage-manager-sa
+      containers:
+        - name: storage-manager
+          image: storage-manager:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          args:
+            - --debug
+            - daemon
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8800
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8800
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+            timeoutSeconds: 2
+          volumeMounts:
+          - mountPath: /var/lib/kubelet/pods
+            name: mount-dir
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/pods
+            type: DirectoryOrCreate
+          name: mount-dir

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: storage-manager-svc
+  namespace: kube-csi
+  labels:
+    app: storage-manager
+spec:
+  ports:
+  - port: 8800
+    targetPort: 8800
+  selector:
+    app: storage-manager

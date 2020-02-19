@@ -5,6 +5,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"storage-manager/pkg/api"
+	//"storage-manager/pkg/k8s"
 )
 
 func DaemonCmd() *cli.Command {
@@ -22,7 +23,10 @@ func DaemonCmd() *cli.Command {
 
 func startManager(c *cli.Context) error {
 
-	api.StartHttpServer()
+	//client := k8s.NewK8SClient("", "")
+	//logrus.Infof("zzlin test client: %v", client)
+
+	go api.StartHttpServer()
 
 	return nil
 }
