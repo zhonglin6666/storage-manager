@@ -8,5 +8,6 @@ RUN cp -a /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && yum clean all
 
 ADD bin/storage-manager /storage-manager
+ADD fusermount /bin/fusermount
 
 ENTRYPOINT ["/storage-manager"]
