@@ -2,15 +2,21 @@ package fs
 
 import (
 	"context"
-	"encoding/json"
 	"log"
-	"os"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	b  = 1024
+	kb = 1024 * 1024
+
+	dirKB = 4 * 1024 * 1024
 )
 
 type MemoryFileSystem struct {
@@ -28,7 +34,7 @@ func NewMemoryFileSystem(workSpace string, debug bool) *MemoryFileSystem {
 func (m *MemoryFileSystem) Create() {
 	root := &MemRoot{}
 
-	logrus.Debugf("MemoryFileSystem create workspace: %s begin", m.WorkSpace)
+	logrus.Infof("MemoryFileSystem create workspace: %s begin", m.WorkSpace)
 
 	opts := &fs.Options{}
 	opts.Debug = m.Debug
@@ -37,13 +43,13 @@ func (m *MemoryFileSystem) Create() {
 		log.Fatalf("Mount fail: %v\n", err)
 	}
 
-	server.Wait()
+	go server.Wait()
 
-	logrus.Debugf("MemoryFileSystem create workspace: %s end", m.WorkSpace)
+	logrus.Infof("MemoryFileSystem create workspace: %s end", m.WorkSpace)
 }
 
 type MemRoot struct {
-	file *os.File
+	sync.Mutex
 	fs.Inode
 }
 
@@ -54,33 +60,15 @@ func (r *MemRoot) OnAdd(ctx context.Context) {
 	Ino++
 	ch := r.NewPersistentInode(
 		ctx, &MemRegularFile{
-			Data: []byte("aaaaaaaaaa\n"),
 			Attr: fuse.Attr{
 				Mode: 0644,
 			},
 		}, fs.StableAttr{Ino: Ino})
 
-	r.AddChild("file.log", ch, false)
+	r.AddChild(".", ch, false)
 
-	writeToMetaData(r.file, r)
+	// writeToMetaData(r.file, r)
 
-}
-
-func writeToMetaData(f *os.File, r *MemRoot) error {
-	data, err := json.Marshal(r)
-	if err != nil {
-		log.Printf("writeToMetaData Marshal error: %v", err)
-		return err
-	}
-
-	log.Printf("writeToMetaData len: %v", len(data))
-
-	_, err = f.WriteAt([]byte(data), int64(0))
-	if err != nil {
-		log.Printf("writeToMetaData WriteAt error: %v", err)
-		return err
-	}
-	return nil
 }
 
 func (r *MemRoot) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
@@ -90,13 +78,22 @@ func (r *MemRoot) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrO
 }
 
 func (r *MemRoot) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	log.Printf("HelloRoot Mkdir name: %v, mode: %v, r: %v ", name, mode, r.String())
+	logrus.Infof("MemRoot Mkdir name: %v, mode: %v, r: %v ", name, mode, r.String())
+
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
+	value := uint64(time.Now().Unix())
 
 	Ino++
 	ch := r.NewPersistentInode(
 		ctx, &MemRegularFile{
 			Attr: fuse.Attr{
-				Mode: mode,
+				Size:  dirKB,
+				Mode:  mode,
+				Atime: value,
+				Mtime: value,
+				Ctime: value,
 			},
 		}, fs.StableAttr{Ino: Ino, Mode: syscall.S_IFDIR})
 	r.AddChild(name, ch, false)
@@ -107,16 +104,26 @@ func (r *MemRoot) Mkdir(ctx context.Context, name string, mode uint32, out *fuse
 func (r *MemRoot) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (node *fs.Inode,
 	fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
 
-	Ino++
-	ch := r.NewPersistentInode(
-		ctx, &fs.MemRegularFile{
-			Attr: fuse.Attr{
-				Mode: mode,
-			},
-		}, fs.StableAttr{Ino: Ino})
-	r.AddChild(name, ch, false)
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 
-	// file := fs.NewLoopbackFile(int(r.file.Fd()))
+	Ino++
+	logrus.Infof("MemRoot Create: %v, mode: %v, r: %v ", name, mode, r.String())
+
+	value := uint64(time.Now().Unix())
+	ch := r.NewPersistentInode(
+		ctx, &MemRegularFile{
+			Attr: fuse.Attr{
+				Size:  dirKB,
+				Mode:  mode,
+				Atime: value,
+				Mtime: value,
+				Ctime: value,
+			},
+		}, fs.StableAttr{
+			Ino: Ino,
+		})
+	r.AddChild(name, ch, false)
 
 	return ch, nil, 0, 0
 }
@@ -147,6 +154,7 @@ func (f *MemRegularFile) Open(ctx context.Context, flags uint32) (fh fs.FileHand
 }
 
 func (f *MemRegularFile) Write(ctx context.Context, fh fs.FileHandle, data []byte, off int64) (uint32, syscall.Errno) {
+	logrus.Infof("MemRegularFile: %s Write off: %v", f.String(), off)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	end := int64(len(data)) + off
@@ -155,8 +163,6 @@ func (f *MemRegularFile) Write(ctx context.Context, fh fs.FileHandle, data []byt
 		copy(n, f.Data)
 		f.Data = n
 	}
-
-	log.Printf("MemRegularFile Write len: %v off: %v", len(data), off)
 
 	copy(f.Data[off:off+int64(len(data))], data)
 
@@ -189,6 +195,8 @@ func (f *MemRegularFile) Flush(ctx context.Context, fh fs.FileHandle) syscall.Er
 }
 
 func (f *MemRegularFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off int64) (fuse.ReadResult, syscall.Errno) {
+	log.Printf("MemRegularFile: %s Read off: %v", f.String(), off)
+
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	end := int(off) + len(dest)
@@ -196,13 +204,12 @@ func (f *MemRegularFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte
 		end = len(f.Data)
 	}
 
-	log.Printf("MemRegularFile Read len: %v off: %v", len(dest), off)
-
 	return fuse.ReadResultData(f.Data[off:end]), fs.OK
 }
 
 func (f *MemRegularFile) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (node *fs.Inode,
 	fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
+	logrus.Infof("MemRegularFile: Create name： %s", name)
 
 	I++
 	ch := f.NewPersistentInode(

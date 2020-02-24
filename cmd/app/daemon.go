@@ -26,7 +26,10 @@ func startManager(c *cli.Context) error {
 	//client := k8s.NewK8SClient("", "")
 	//logrus.Infof("zzlin test client: %v", client)
 
-	go api.StartHttpServer()
+	server := &api.Server{
+		Memory: c.Bool("memory"),
+	}
+	server.Start()
 
 	return nil
 }

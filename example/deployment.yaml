@@ -1,8 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    xxxxxx: xxxxxxxxx
   name: mysql-hostpath
   labels:
     app: wordpress-hostpath
@@ -17,12 +15,6 @@ spec:
     type: Recreate
   template:
     metadata:
-      annotations:
-        io.kubernetes-webhook-server.cluster-id: "cluster-id-test"
-        io.kubernetes-network.region-id: "region-id-test"
-        io.kubernetes-network.subnet-id: "subnet-id-test"
-        io.kubernetes-network.subnetgatewayaddr: "subnetgatewayaddr-test"
-        io.kubernetes-network.subnetcidr: "subnetcidr"
       labels:
         app: wordpress-hostpath
         tier: mysql-hostpath
@@ -35,12 +27,6 @@ spec:
             - name: MYSQL_ROOT_PASSWORD
               value: changeme
           ports:
-
-
-
-
-
-
             - containerPort: 3306
               name: mysql
           volumeMounts:

@@ -2,13 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
-
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 
 	"storage-manager/cmd/app"
 )
@@ -18,7 +17,7 @@ var (
 )
 
 const (
-	usage = `
+	helpUsage = `
 
 	`
 )
@@ -29,7 +28,7 @@ func main() {
 
 	app := cli.App{
 		Name:            "manager",
-		Usage:           usage,
+		Usage:           helpUsage,
 		Version:         version,
 		CommandNotFound: cmdNotFound,
 		Before: func(ctx *cli.Context) error {
@@ -42,6 +41,10 @@ func main() {
 			&cli.BoolFlag{
 				Name:  "debug, d",
 				Usage: "enable debug log level",
+			},
+			&cli.BoolFlag{
+				Name:  "memory, m",
+				Usage: "implement file system with memory",
 			},
 		},
 		Commands: []*cli.Command{
