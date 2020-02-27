@@ -46,6 +46,10 @@ func main() {
 				Name:  "memory, m",
 				Usage: "implement file system with memory",
 			},
+			&cli.BoolFlag{
+				Name:  "file, f",
+				Usage: "implement file system with file",
+			},
 		},
 		Commands: []*cli.Command{
 			app.DaemonCmd(),

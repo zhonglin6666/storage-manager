@@ -2,7 +2,6 @@ package fs
 
 import (
 	"context"
-	"log"
 	"sync"
 	"syscall"
 	"time"
@@ -13,9 +12,6 @@ import (
 )
 
 const (
-	b  = 1024
-	kb = 1024 * 1024
-
 	dirKB = 4 * 1024 * 1024
 )
 
@@ -24,7 +20,7 @@ type MemoryFileSystem struct {
 	WorkSpace string
 }
 
-func NewMemoryFileSystem(workSpace string, debug bool) *MemoryFileSystem {
+func NewMemoryFileSystem(workSpace string, debug bool) FileSystem {
 	return &MemoryFileSystem{
 		Debug:     debug,
 		WorkSpace: workSpace,
@@ -40,7 +36,8 @@ func (m *MemoryFileSystem) Create() {
 	opts.Debug = m.Debug
 	server, err := fs.Mount(m.WorkSpace, root, opts)
 	if err != nil {
-		log.Fatalf("Mount fail: %v\n", err)
+		logrus.Errorf("Mount fail: %v\n", err)
+		return
 	}
 
 	go server.Wait()
@@ -57,18 +54,36 @@ type MemRoot struct {
 var Ino uint64 = 1
 
 func (r *MemRoot) OnAdd(ctx context.Context) {
+	value := uint64(time.Now().Unix())
+	r.Lock()
+	defer r.Unlock()
+
 	Ino++
-	ch := r.NewPersistentInode(
+	cur := r.NewPersistentInode(
 		ctx, &MemRegularFile{
 			Attr: fuse.Attr{
-				Mode: 0644,
+				Size:  dirKB,
+				Mode:  0644,
+				Atime: value,
+				Mtime: value,
+				Ctime: value,
 			},
-		}, fs.StableAttr{Ino: Ino})
+		}, fs.StableAttr{Ino: Ino, Mode: syscall.S_IFDIR})
 
-	r.AddChild(".", ch, false)
+	r.AddChild(".", cur, false)
 
-	// writeToMetaData(r.file, r)
-
+	Ino++
+	pre := r.NewPersistentInode(
+		ctx, &MemRegularFile{
+			Attr: fuse.Attr{
+				Size:  dirKB,
+				Mode:  0644,
+				Atime: value,
+				Mtime: value,
+				Ctime: value,
+			},
+		}, fs.StableAttr{Ino: Ino, Mode: syscall.S_IFDIR})
+	r.AddChild("..", pre, false)
 }
 
 func (r *MemRoot) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
@@ -154,7 +169,6 @@ func (f *MemRegularFile) Open(ctx context.Context, flags uint32) (fh fs.FileHand
 }
 
 func (f *MemRegularFile) Write(ctx context.Context, fh fs.FileHandle, data []byte, off int64) (uint32, syscall.Errno) {
-	logrus.Infof("MemRegularFile: %s Write off: %v", f.String(), off)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	end := int64(len(data)) + off
@@ -195,8 +209,6 @@ func (f *MemRegularFile) Flush(ctx context.Context, fh fs.FileHandle) syscall.Er
 }
 
 func (f *MemRegularFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte, off int64) (fuse.ReadResult, syscall.Errno) {
-	log.Printf("MemRegularFile: %s Read off: %v", f.String(), off)
-
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	end := int(off) + len(dest)
@@ -209,13 +221,19 @@ func (f *MemRegularFile) Read(ctx context.Context, fh fs.FileHandle, dest []byte
 
 func (f *MemRegularFile) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (node *fs.Inode,
 	fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
-	logrus.Infof("MemRegularFile: Create name： %s", name)
+	value := uint64(time.Now().Unix())
 
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	I++
 	ch := f.NewPersistentInode(
 		ctx, &MemRegularFile{
 			Attr: fuse.Attr{
-				Mode: mode,
+				Size:  dirKB,
+				Mode:  mode,
+				Atime: value,
+				Mtime: value,
+				Ctime: value,
 			},
 		}, fs.StableAttr{Ino: I})
 	f.AddChild(name, ch, false)
@@ -224,13 +242,19 @@ func (f *MemRegularFile) Create(ctx context.Context, name string, flags uint32, 
 }
 
 func (f *MemRegularFile) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	log.Printf("MemRegularFile Mkdir name: %v   stable: %v", name, f.Attr.Ino)
+	value := uint64(time.Now().Unix())
 
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	I++
 	ch := f.NewPersistentInode(
 		ctx, &MemRegularFile{
 			Attr: fuse.Attr{
-				Mode: mode,
+				Size:  dirKB,
+				Mode:  mode,
+				Atime: value,
+				Mtime: value,
+				Ctime: value,
 			},
 		}, fs.StableAttr{Ino: I, Mode: syscall.S_IFDIR})
 	f.AddChild(name, ch, false)

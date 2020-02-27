@@ -16,6 +16,7 @@ const (
 type Server struct {
 	Debug  bool
 	Memory bool
+	File   bool
 }
 
 func (s *Server) Start() {

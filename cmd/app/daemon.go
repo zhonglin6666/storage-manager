@@ -28,6 +28,7 @@ func startManager(c *cli.Context) error {
 
 	server := &api.Server{
 		Memory: c.Bool("memory"),
+		File:   c.Bool("file"),
 	}
 	server.Start()
 

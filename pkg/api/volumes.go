@@ -11,12 +11,15 @@ import (
 	"k8s.io/kubernetes/pkg/util/mount"
 
 	"storage-manager/pkg/fs"
+	file "storage-manager/pkg/fs/file-2"
 )
 
 type Volume struct {
 	Replicas   int
 	Size       int
 	TargetPath string
+
+	roots map[string]string
 }
 
 func getVolume(request *restful.Request, response *restful.Response) {
@@ -38,6 +41,8 @@ func (s *Server) createVolume(request *restful.Request, response *restful.Respon
 
 	if s.Memory {
 		return
+	} else if s.File {
+
 	}
 }
 
@@ -50,6 +55,8 @@ func (s *Server) deleteVolume(request *restful.Request, response *restful.Respon
 
 	if s.Memory {
 		return
+	} else if s.File {
+
 	}
 }
 
@@ -95,11 +102,12 @@ func (s *Server) mount(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	// TODO 文件权限
-
 	if s.Memory {
 		mem := fs.NewMemoryFileSystem(volume.TargetPath, false)
 		mem.Create()
+	} else if s.File {
+		fs := file.NewFileSystem(volume.TargetPath, false)
+		go fs.Create()
 	}
 
 	response.Write([]byte("OK"))
